@@ -1,0 +1,19 @@
+name: On PR run actionlint
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - .github/**
+
+jobs:
+  actionlint:
+    timeout-minutes: 10
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        
+      - name: Run actionlint
+        uses: reviewdog/action-actionlint@v1

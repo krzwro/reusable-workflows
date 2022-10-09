@@ -1,0 +1,31 @@
+name: Build and push docker image
+
+on:
+  workflow_call:
+
+jobs:
+  docker:
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+        with:
+          driver-opts: network=host
+
+      - name: Release
+        uses: krzwro/automated-release-action@v0.2.1
+        id: release
+
+      - name: Build and push to local registry
+        uses: docker/build-push-action@v3
+        if: ${{ steps.release.outputs.version }}
+        with:
+          context: .
+          push: true
+          tags: registry.syncross.pl/krz/sc-buffer:${{ steps.release.outputs.version }}
+          build-args: ARG_BUFFER_VERSION=${{ steps.release.outputs.version }}
