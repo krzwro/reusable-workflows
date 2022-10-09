@@ -2,6 +2,10 @@ name: Build and push docker image
 
 on:
   workflow_call:
+    inputs:
+      image_name:
+        required: true
+        type: string
 
 jobs:
   docker:
@@ -24,11 +28,11 @@ jobs:
         uses: krzwro/automated-release-action@v0.2.1
         id: release
 
-      - name: Build and push to local registry
+      - name: Build and push to registry
         uses: docker/build-push-action@v3
         if: ${{ steps.release.outputs.version }}
         with:
           context: .
           push: true
-          tags: registry.syncross.pl/krz/sc-buffer:${{ steps.release.outputs.version }}
-          build-args: ARG_BUFFER_VERSION=${{ steps.release.outputs.version }}
+          tags: ${{ inputs.image_name }}:${{ steps.release.outputs.version }}
+          build-args: RELEASED_VERSION=${{ steps.release.outputs.version }}
