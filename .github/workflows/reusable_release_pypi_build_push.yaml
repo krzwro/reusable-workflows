@@ -3,9 +3,6 @@ name: Build and push python package
 on:
   workflow_call:
     inputs:
-      image_name:
-        required: true
-        type: string
       pypi_url:
         required: true
         type: string

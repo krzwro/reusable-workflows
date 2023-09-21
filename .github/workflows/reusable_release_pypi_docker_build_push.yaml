@@ -3,6 +3,9 @@ name: Build and push docker image and python package
 on:
   workflow_call:
     inputs:
+      image_name:
+        required: true
+        type: string
       pypi_url:
         required: true
         type: string
