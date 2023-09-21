@@ -1,0 +1,53 @@
+name: Build and push docker image and python package
+
+on:
+  workflow_call:
+    inputs:
+      pypi_url:
+        required: true
+        type: string
+
+jobs:
+  docker:
+    runs-on: self-hosted
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+        with:
+          driver-opts: network=host
+
+      - name: Release
+        uses: krzwro/automated-release-action@v0.2.2
+        id: release
+
+      - name: Build and push to registry
+        uses: docker/build-push-action@v4
+        if: ${{ steps.release.outputs.version }}
+        with:
+          context: .
+          push: true
+          tags: ${{ inputs.image_name }}:${{ steps.release.outputs.version }}
+          build-args: RELEASED_VERSION=${{ steps.release.outputs.version }}
+
+      - name: Setup python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Setup poetry
+        uses: Gr1N/setup-poetry@v8
+
+      - name: Publish package
+        shell: bash
+        run: |
+          sed -i 's/<VERSION>/${{ steps.release.outputs.version }}/' pyproject.toml
+          poetry config repositories.private_pypi ${{ inputs.pypi_url }}
+          poetry publish --build --repository private_pypi

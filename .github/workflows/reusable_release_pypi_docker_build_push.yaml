@@ -1,0 +1,39 @@
+name: Build and push python package
+
+on:
+  workflow_call:
+    inputs:
+      image_name:
+        required: true
+        type: string
+      pypi_url:
+        required: true
+        type: string
+
+jobs:
+  docker:
+    runs-on: self-hosted
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Release
+        uses: krzwro/automated-release-action@v0.2.2
+        id: release
+
+      - name: Setup python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Setup poetry
+        uses: Gr1N/setup-poetry@v8
+
+      - name: Publish package
+        shell: bash
+        run: |
+          sed -i 's/<VERSION>/${{ steps.release.outputs.version }}/' pyproject.toml
+          poetry config repositories.private_pypi ${{ inputs.pypi_url }}
+          poetry publish --build --repository private_pypi
