@@ -41,7 +41,7 @@ jobs:
           build-args: RELEASED_VERSION=${{ steps.release.outputs.version }}
 
       - name: Setup python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         if: ${{ steps.release.outputs.version }}
         with:
           python-version: "3.11"
