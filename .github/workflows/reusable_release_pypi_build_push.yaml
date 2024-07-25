@@ -43,7 +43,7 @@ jobs:
         run: |
           for DIRECTORY in ${DIRECTORIES}; do
             pushd ${DIRECTORY}
-            sed -i 's/<VERSION>/${RELEASED_VERSION}/' pyproject.toml
+            sed -i "s/<VERSION>/${RELEASED_VERSION}/" pyproject.toml
             poetry config repositories.private_pypi ${PYPI_URL}
             poetry publish --build --repository private_pypi
             popd
