@@ -9,6 +9,9 @@ on:
       pypi_url:
         required: true
         type: string
+      package_directories:
+        default: "."
+        type: string
 
 jobs:
   pypi-docker:
@@ -53,7 +56,15 @@ jobs:
       - name: Publish package
         if: ${{ steps.release.outputs.version }}
         shell: bash
+        env:
+          PYPI_URL: ${{ inputs.pypi_url }}
+          DIRECTORY: ${{ inputs.package_directories }}
+          RELEASED_VERSION: ${{ steps.release.outputs.version }}
         run: |
-          sed -i 's/<VERSION>/${{ steps.release.outputs.version }}/' pyproject.toml
-          poetry config repositories.private_pypi ${{ inputs.pypi_url }}
-          poetry publish --build --repository private_pypi
+          for DIRECTORY in ${DIRECTORIES}; do
+            cd ${DIRECTORY}
+            sed -i 's/<VERSION>/${RELEASED_VERSION}/' pyproject.toml
+            poetry config repositories.private_pypi ${PYPI_URL}
+            poetry publish --build --repository private_pypi
+            cd ..
+          done
