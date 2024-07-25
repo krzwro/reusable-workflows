@@ -62,9 +62,9 @@ jobs:
           RELEASED_VERSION: ${{ steps.release.outputs.version }}
         run: |
           for DIRECTORY in ${DIRECTORIES}; do
-            cd ${DIRECTORY}
+            pushd ${DIRECTORY}
             sed -i 's/<VERSION>/${RELEASED_VERSION}/' pyproject.toml
             poetry config repositories.private_pypi ${PYPI_URL}
             poetry publish --build --repository private_pypi
-            cd ..
+            popd
           done
