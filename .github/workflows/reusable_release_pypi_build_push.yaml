@@ -24,7 +24,7 @@ jobs:
         id: release
 
       - name: Setup python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         if: ${{ steps.release.outputs.version }}
         with:
           python-version: "3.11"
