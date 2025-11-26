@@ -6,6 +6,9 @@ on:
       image_name:
         required: true
         type: string
+      version:
+        required: false
+        type: string
       pypi_url:
         required: true
         type: string
@@ -30,38 +33,28 @@ jobs:
         with:
           driver-opts: network=host
 
-      - name: Release
-        uses: krzwro/automated-release-action@v1.0.1
-        id: release
-        with:
-          add_tags: false
-
       - name: Build and push to registry
         uses: docker/build-push-action@v4
-        if: ${{ steps.release.outputs.version }}
         with:
           context: .
           push: true
-          tags: ${{ inputs.image_name }}:${{ steps.release.outputs.version }}
-          build-args: RELEASED_VERSION=${{ steps.release.outputs.version }}
+          tags: ${{ inputs.image_name }}:${{ inputs.version }}
+          build-args: RELEASED_VERSION=${{ inputs.version }}
 
       - name: Setup python
         uses: actions/setup-python@v4
-        if: ${{ steps.release.outputs.version }}
         with:
           python-version: "3.11"
 
       - name: Setup poetry
         uses: Gr1N/setup-poetry@v8
-        if: ${{ steps.release.outputs.version }}
 
       - name: Publish package
-        if: ${{ steps.release.outputs.version }}
         shell: bash
         env:
           PYPI_URL: ${{ inputs.pypi_url }}
           DIRECTORY: ${{ inputs.package_directories }}
-          RELEASED_VERSION: ${{ steps.release.outputs.version }}
+          RELEASED_VERSION: ${{ inputs.version }}
         run: |
           for DIRECTORY in ${DIRECTORIES}; do
             pushd ${DIRECTORY}

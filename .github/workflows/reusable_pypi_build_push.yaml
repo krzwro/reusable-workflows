@@ -9,6 +9,9 @@ on:
       package_directories:
         default: "."
         type: string
+      version:
+        required: false
+        type: string
 
 jobs:
   pypi:
@@ -19,29 +22,20 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Release
-        uses: krzwro/automated-release-action@v1.0.1
-        id: release
-        with:
-          add_tags: false
-
       - name: Setup python
         uses: actions/setup-python@v4
-        if: ${{ steps.release.outputs.version }}
         with:
           python-version: "3.11"
 
       - name: Setup poetry
         uses: Gr1N/setup-poetry@v8
-        if: ${{ steps.release.outputs.version }}
 
       - name: Publish package
-        if: ${{ steps.release.outputs.version }}
         shell: bash
         env:
           PYPI_URL: ${{ inputs.pypi_url }}
           DIRECTORIES: ${{ inputs.package_directories }}
-          RELEASED_VERSION: ${{ steps.release.outputs.version }}
+          RELEASED_VERSION: ${{ inputs.version }}
         run: |
           for DIRECTORY in ${DIRECTORIES}; do
             pushd ${DIRECTORY}
