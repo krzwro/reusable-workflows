@@ -33,7 +33,7 @@ jobs:
         uses: tj-actions/changed-files@v46 
         with:
           files: |
-            .github/workflows/reusable_${{ matrix.tag }}.yml
+            .github/workflows/reusable_${{ matrix.tag }}.yaml
 
       - name: Check if workflow file changed
         id: check_workflow
