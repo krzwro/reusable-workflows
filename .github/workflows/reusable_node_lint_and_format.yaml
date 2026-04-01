@@ -38,4 +38,3 @@ jobs:
         run: yarn lint
       - name: Run Stylelint
         run: yarn lintcss
-

@@ -53,6 +53,9 @@ jobs:
         shell: bash
         env:
           TAG_PREFIX: "${{ matrix.tag }}/v"
+          GITHUB_PR_LABEL_MAJOR: ${{ contains(github.event.pull_request.labels.*.name, 'major') && '1' || '0' }}
+          GITHUB_PR_LABEL_MINOR: ${{ contains(github.event.pull_request.labels.*.name, 'minor') && '1' || '0' }}
+          GITHUB_PR_LABEL_PATCH: ${{ contains(github.event.pull_request.labels.*.name, 'patch') && '1' || '0' }}
         run: |
           set -euo pipefail
 
