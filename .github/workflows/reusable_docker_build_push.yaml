@@ -34,3 +34,4 @@ jobs:
           push: true
           tags: ${{ inputs.image_name }}:${{ inputs.version }}
           build-args: RELEASED_VERSION=${{ inputs.version }}
+
