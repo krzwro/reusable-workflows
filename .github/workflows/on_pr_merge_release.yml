@@ -59,7 +59,7 @@ jobs:
           function get_latest_semver_tag() {
             local prefix_pattern="$1"
 
-            latest_tag=$(git tag -l | grep -E "${prefix_pattern}[0-9]{1,}\.[0-9]{1,}\.[0-9]{1,}${suffix_pattern}$" | sort -V | tail -n 1 | tr -d '[:space:]')
+            latest_tag=$(git tag -l | grep -E "${prefix_pattern}[0-9]{1,}\.[0-9]{1,}\.[0-9]{1,}" | sort -V | tail -n 1 | tr -d '[:space:]')
 
             if [[ -z "$latest_tag" ]]; then
               echo ""
@@ -84,6 +84,7 @@ jobs:
 
           git fetch --tags --force
 
+          INITIAL_VERSION="0.0.0"
           LATEST_TAG=$(get_latest_semver_tag "${TAG_PREFIX}")
 
           if [[ -z "${LATEST_TAG}" ]]; then
