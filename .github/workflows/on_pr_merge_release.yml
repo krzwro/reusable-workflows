@@ -1,0 +1,158 @@
+name: Release reusable workflows
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - closed
+
+jobs:
+  release-workflows:
+    strategy:
+      matrix:
+        tag: [docker_build_push, pypi_build_push, pypi_docker_build_push, release_docker_build_push, release_pypi_build_push, release_pypi_docker_build_push, node_lint_and_format]
+    name: Release of ${{ matrix.tag }} workflow
+    permissions:
+      contents: "write"
+      pull-requests: "read"
+      id-token: "write"
+    timeout-minutes: 15
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.merge_commit_sha }}
+          fetch-tags: "true"
+          show-progress: "false"
+
+      - name: Get changed files
+        id: files
+        uses: tj-actions/changed-files@v46 
+        with:
+          files: |
+            .github/workflows/reusable_${{ matrix.tag }}.yml
+
+      - name: Check if workflow file changed
+        id: check_workflow
+        shell: bash
+        env:
+          CHANGED_FILES: ${{ steps.files.outputs.all_changed_files }}
+        run: |
+          if [ -n "${CHANGED_FILES}" ]; then
+            echo "Workflow file changed, releasing new version."
+            echo "file_changed=true" >> "${GITHUB_OUTPUT}"
+          else
+            echo "file_changed=false" >> "${GITHUB_OUTPUT}"
+          fi
+
+      - name: Add git tag
+        if: github.event.pull_request.merged == true && steps.check_workflow.outputs.file_changed == 'true'
+        shell: bash
+        env:
+          TAG_PREFIX: "${{ matrix.tag }}/v"
+        run: |
+          set -euo pipefail
+
+          function get_latest_semver_tag() {
+            local prefix_pattern="$1"
+
+            latest_tag=$(git tag -l | grep -E "${prefix_pattern}[0-9]{1,}\.[0-9]{1,}\.[0-9]{1,}${suffix_pattern}$" | sort -V | tail -n 1 | tr -d '[:space:]')
+
+            if [[ -z "$latest_tag" ]]; then
+              echo ""
+              return 0
+            fi
+
+            echo "$latest_tag"
+          }
+
+          function extract_version_from_tag() {
+            local tag="$1"
+            echo "${tag}" | grep -o -E '[0-9]+\.[0-9]+\.[0-9]+'
+          }
+
+          function add_move_tags () {
+            echo "Adding tag ${1}"
+            git tag -d "${1}" || true
+            git push --delete origin "${1}" || true
+            git tag -a "${1}" -m "${1}"
+            git push origin "${1}"
+          }
+
+          git fetch --tags --force
+
+          LATEST_TAG=$(get_latest_semver_tag "${TAG_PREFIX}")
+
+          if [[ -z "${LATEST_TAG}" ]]; then
+            echo "No tags found matching the pattern. Using initial version: '${INITIAL_VERSION}'"
+            LATEST_VERSION="${INITIAL_VERSION}"
+          else
+            echo "Latest tag matching the pattern found is: '${LATEST_TAG}'"
+            extracted_version="$(extract_version_from_tag "${LATEST_TAG}")"
+            if [[ -z "${extracted_version}" ]]; then
+              echo "No valid semantic version found in the tag. Using initial version: '${LATEST_VERSION}'"
+            else
+              LATEST_VERSION="${extracted_version}"
+              echo "Extracted version from the latest tag is: ${LATEST_VERSION}"
+            fi
+          fi
+
+          VERSION_BUMP_SCHEME="undefined"
+
+          if [[ "${GITHUB_PR_LABEL_MAJOR-0}" == "1" ]]; then
+            VERSION_BUMP_SCHEME="major"
+          elif [[ "${GITHUB_PR_LABEL_MINOR-0}" == "1" ]]; then
+            VERSION_BUMP_SCHEME="minor"
+          elif [[ "${GITHUB_PR_LABEL_PATCH-0}" == "1" ]]; then
+            VERSION_BUMP_SCHEME="patch"
+          fi
+
+          read -r major minor patch <<< "${LATEST_VERSION//./ }"
+          case "${VERSION_BUMP_SCHEME}" in
+            major)
+              major=$((major + 1))
+              minor=0
+              patch=0
+              ;;
+            minor)
+              minor=$((minor + 1))
+              patch=0
+              ;;
+            patch)
+              patch=$((patch + 1))
+              ;;
+            *)
+              echo "Invalid bump version scheme: '${VERSION_BUMP_SCHEME}'. Valid options are: major, minor, patch."
+              exit 1
+              ;;
+          esac
+          NEW_VERSION="${TAG_PREFIX}${major}.${minor}.${patch}"
+          echo "New version calculated: '${NEW_VERSION}'"
+
+          MINOR_VERSION="${NEW_VERSION%.*}"
+          MAJOR_VERSION="${NEW_VERSION%.*.*}"
+          echo "New tag generated: '${NEW_VERSION}'"
+          echo "New minor tag generated: '${MINOR_VERSION}'"
+          echo "New major tag generated: '${MAJOR_VERSION}'"
+
+          {
+            echo "prev_tag=${LATEST_TAG}"
+            echo "prev_version=${LATEST_VERSION}"
+            echo "tag=${NEW_VERSION}"
+            echo "version=${NEW_VERSION}"
+            echo "minor_tag=${MINOR_VERSION}"
+            echo "major_tag=${MAJOR_VERSION}"
+          } >> "${GITHUB_OUTPUT}"
+
+          echo "Creating and pushing new tag '${NEW_VERSION}' with version '${NEW_VERSION}'"
+          git config --global user.name "GitHub Action"
+          git config --global user.email "username@users.noreply.github.com"
+
+          add_move_tags "${NEW_VERSION}"
+          echo "New tag \"${NEW_VERSION}\" created and pushed to the repository."
+
+          add_move_tags "${MINOR_VERSION}"
+          add_move_tags "${MAJOR_VERSION}"

@@ -1,0 +1,40 @@
+name: Lint and format node project
+
+on:
+  workflow_call:
+    inputs:
+      node_version:
+        required: false
+        type: string
+        default: "22"
+      yarn_version:
+        required: false
+        type: string
+        default: "4.7.0"
+
+jobs:
+  lint-and-format:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ inputs.node_version }}
+
+      - name: Update Yarn
+        run: |
+          corepack enable
+          yarn set version ${{ inputs.yarn_version }}
+
+      - name: Install dependencies
+        run: yarn install --immutable
+
+      - name: Run Prettier
+        run: yarn format
+      - name: Run ESLint
+        run: yarn lint
+      - name: Run Stylelint
+        run: yarn lintcss

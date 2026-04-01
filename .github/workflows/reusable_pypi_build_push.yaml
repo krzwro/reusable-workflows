@@ -23,7 +23,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
@@ -38,9 +38,9 @@ jobs:
           RELEASED_VERSION: ${{ inputs.version }}
         run: |
           for DIRECTORY in ${DIRECTORIES}; do
-            pushd ${DIRECTORY}
+            pushd "${DIRECTORY}"
             sed -i "s/<VERSION>/${RELEASED_VERSION}/" pyproject.toml
-            poetry config repositories.private_pypi ${PYPI_URL}
+            poetry config repositories.private_pypi "${PYPI_URL}"
             poetry publish --build --repository private_pypi
             rm -r dist
             popd
