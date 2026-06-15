@@ -21,6 +21,12 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          # Full history + tags so poetry-dynamic-versioning can derive the
+          # version from the latest git tag. Harmless for repos that still
+          # rely on the <VERSION> placeholder below.
+          fetch-depth: 0
+          fetch-tags: true
 
       - name: Setup python
         uses: actions/setup-python@v5
@@ -29,6 +35,13 @@ jobs:
 
       - name: Setup poetry
         uses: Gr1N/setup-poetry@v8
+
+      - name: Install poetry-dynamic-versioning plugin
+        # No-op for repos that don't set `enable = true`; required for Poetry's
+        # own build/publish to apply dynamic versioning (the build-backend
+        # setting alone only covers PEP 517 frontends like pip).
+        shell: bash
+        run: poetry self add "poetry-dynamic-versioning[plugin]"
 
       - name: Publish package
         shell: bash
@@ -39,6 +52,8 @@ jobs:
         run: |
           for DIRECTORY in ${DIRECTORIES}; do
             pushd "${DIRECTORY}"
+            # Backward compat: substitutes the placeholder for repos still
+            # passing `version`. No-op when there's no <VERSION> (dynamic repos).
             sed -i "s/<VERSION>/${RELEASED_VERSION}/" pyproject.toml
             poetry config repositories.private_pypi "${PYPI_URL}"
             poetry publish --build --repository private_pypi

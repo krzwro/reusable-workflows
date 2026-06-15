@@ -29,6 +29,12 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          # Full history + tags so poetry-dynamic-versioning can derive the
+          # version from the latest git tag. Harmless for repos that still
+          # rely on the <VERSION> placeholder below.
+          fetch-depth: 0
+          fetch-tags: true
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -55,11 +61,18 @@ jobs:
       - name: Setup poetry
         uses: Gr1N/setup-poetry@v8
 
+      - name: Install poetry-dynamic-versioning plugin
+        # No-op for repos that don't set `enable = true`; required for Poetry's
+        # own build/publish to apply dynamic versioning (the build-backend
+        # setting alone only covers PEP 517 frontends like pip).
+        shell: bash
+        run: poetry self add "poetry-dynamic-versioning[plugin]"
+
       - name: Publish package
         shell: bash
         env:
           PYPI_URL: ${{ inputs.pypi_url }}
-          DIRECTORY: ${{ inputs.package_directories }}
+          DIRECTORIES: ${{ inputs.package_directories }}
           RELEASED_VERSION: ${{ inputs.version }}
         run: |
           for DIRECTORY in ${DIRECTORIES}; do
