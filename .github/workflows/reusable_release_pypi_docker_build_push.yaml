@@ -41,6 +41,14 @@ jobs:
         with:
           add_tags: false
 
+      - name: Fetch release tag
+        # The Release step creates the tag on the remote; pull it locally so
+        # poetry-dynamic-versioning resolves to this release, not the previous
+        # tag. No-op for placeholder repos.
+        if: ${{ steps.release.outputs.version }}
+        shell: bash
+        run: git fetch --tags --force
+
       - name: Build and push to registry
         uses: docker/build-push-action@v5
         if: ${{ steps.release.outputs.version }}
@@ -61,12 +69,20 @@ jobs:
         uses: Gr1N/setup-poetry@v8
         if: ${{ steps.release.outputs.version }}
 
+      - name: Install poetry-dynamic-versioning plugin
+        # No-op for repos that don't set `enable = true`; required for Poetry's
+        # own build/publish to apply dynamic versioning (the build-backend
+        # setting alone only covers PEP 517 frontends like pip).
+        if: ${{ steps.release.outputs.version }}
+        shell: bash
+        run: poetry self add "poetry-dynamic-versioning[plugin]"
+
       - name: Publish package
         if: ${{ steps.release.outputs.version }}
         shell: bash
         env:
           PYPI_URL: ${{ inputs.pypi_url }}
-          DIRECTORY: ${{ inputs.package_directories }}
+          DIRECTORIES: ${{ inputs.package_directories }}
           RELEASED_VERSION: ${{ steps.release.outputs.version }}
         run: |
           for DIRECTORY in ${DIRECTORIES}; do
