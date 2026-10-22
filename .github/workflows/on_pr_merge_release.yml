@@ -11,7 +11,7 @@ jobs:
   release-workflows:
     strategy:
       matrix:
-        tag: [docker_build_push, pypi_build_push, pypi_docker_build_push, release_docker_build_push, release_pypi_build_push, release_pypi_docker_build_push, node_lint_and_format]
+        tag: [docker_build_push, pypi_build_push, pypi_docker_build_push, release_docker_build_push, release_pypi_build_push, release_pypi_docker_build_push, node_lint_and_format, node_unit_tests]
     name: Release of ${{ matrix.tag }} workflow
     permissions:
       contents: "write"
@@ -22,7 +22,7 @@ jobs:
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ github.event.pull_request.merge_commit_sha }}
           fetch-tags: "true"

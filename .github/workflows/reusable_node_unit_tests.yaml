@@ -1,0 +1,96 @@
+name: Unit tests node project
+
+on:
+  workflow_call:
+    inputs:
+      node_version:
+        required: false
+        type: string
+        default: "22"
+      yarn_version:
+        required: false
+        type: string
+        default: "4.7.0"
+      working_directory:
+        description: "Directory containing package.json"
+        required: false
+        type: string
+        default: "."
+      test_command:
+        description: "Command that runs the unit tests; must exit non-zero on failure"
+        required: false
+        type: string
+        default: "yarn test --ci"
+      coverage_directory:
+        description: "Coverage output directory, relative to working_directory. A coverage-summary.json (jest json-summary reporter) in it is rendered in the job summary."
+        required: false
+        type: string
+        default: "coverage"
+      upload_coverage:
+        description: "Upload the coverage directory as a workflow artifact"
+        required: false
+        type: boolean
+        default: true
+      timeout_minutes:
+        required: false
+        type: number
+        default: 15
+
+jobs:
+  unit-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: ${{ inputs.timeout_minutes }}
+    defaults:
+      run:
+        working-directory: ${{ inputs.working_directory }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: ${{ inputs.node_version }}
+
+      - name: Update Yarn
+        env:
+          YARN_VERSION: ${{ inputs.yarn_version }}
+        run: |
+          corepack enable
+          yarn set version "${YARN_VERSION}"
+
+      - name: Install dependencies
+        run: yarn install --immutable
+
+      - name: Run unit tests
+        env:
+          TEST_COMMAND: ${{ inputs.test_command }}
+        run: bash -euo pipefail -c "${TEST_COMMAND}"
+
+      - name: Write coverage summary
+        if: always()
+        env:
+          COVERAGE_DIRECTORY: ${{ inputs.coverage_directory }}
+        run: |
+          summary_file="${COVERAGE_DIRECTORY}/coverage-summary.json"
+          if [[ ! -f "${summary_file}" ]]; then
+            echo "No ${summary_file} found, skipping coverage summary."
+            exit 0
+          fi
+
+          # shellcheck disable=SC2016 # single quotes keep the JS template literals intact
+          node -e '
+            const total = require(require("path").resolve(process.argv[1])).total;
+            const rows = ["lines", "statements", "functions", "branches"]
+              .map((k) => `| ${k} | ${total[k].pct}% | ${total[k].covered}/${total[k].total} |`);
+            console.log(["### Unit test coverage", "", "| Metric | % | Covered |", "| --- | --- | --- |", ...rows].join("\n"));
+          ' "${summary_file}" >> "${GITHUB_STEP_SUMMARY}"
+
+      - name: Upload coverage
+        if: always() && inputs.upload_coverage
+        uses: actions/upload-artifact@v7
+        with:
+          name: coverage
+          path: ${{ inputs.working_directory }}/${{ inputs.coverage_directory }}
+          if-no-files-found: ignore
+          retention-days: 7
