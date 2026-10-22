@@ -78,7 +78,7 @@ on:
         default: 30
     secrets:
       app_id:
-        description: "GitHub App id used to clone private_repositories"
+        description: "GitHub App ID or client ID used to clone private_repositories"
         required: false
       app_private_key:
         description: "GitHub App private key used to clone private_repositories"
@@ -100,7 +100,7 @@ jobs:
         if: inputs.private_repositories != ''
         uses: actions/create-github-app-token@v3
         with:
-          app-id: ${{ secrets.app_id }}
+          client-id: ${{ secrets.app_id }}
           private-key: ${{ secrets.app_private_key }}
           owner: ${{ github.repository_owner }}
           repositories: ${{ inputs.private_repositories }}
